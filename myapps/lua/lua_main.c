@@ -1,5 +1,6 @@
 
 #include <nuttx/config.h>
+#include <sys/ioctl.h>
 /*
 ** $Id: lua.c $
 ** Lua stand-alone interpreter
@@ -21,7 +22,9 @@
 
 #include <lauxlib.h>
 #include <lualib.h>
-
+#include <fcntl.h>
+#include <errno.h>
+#include <nuttx/leds/userled.h>
 
 #if !defined(LUA_PROGNAME)
 #define LUA_PROGNAME		"lua"
@@ -577,20 +580,52 @@ static void doREPL (lua_State *L) {
 
 /* }================================================================== */
 
-///
-static int c_swap (lua_State *L) {
-    //check and fetch the arguments
-    lua_Number arg1 = luaL_checknumber (L, 1);
-    lua_Number arg2 = luaL_checknumber (L, 2);
+#define LED_OPEN 0
+#define LED_CLOSE 1
+#define LED_SET 2
 
-    //push the results
-    lua_pushnumber(L, arg2);
-    lua_pushnumber(L, arg1);
+static int led (lua_State *L) {
+  static const char *const modenames[] = {"open", "close", "set", NULL};
+  int op = luaL_checkoption(L, 1, "open", modenames);
+  op = luaL_checkoption(L, 1, "close", modenames);
+  op = luaL_checkoption(L, 1, "set", modenames);
 
-    //return number of results
-    return 2;
+  printf("led arg %d\n", op);
+
+  static int fd;
+  switch(op)
+  {
+    case LED_OPEN:
+      printf("led_daemon: Opening %s\n", CONFIG_EXAMPLES_LEDS_DEVPATH);
+      fd = open(CONFIG_EXAMPLES_LEDS_DEVPATH, O_WRONLY);
+      if (fd < 0)
+      {
+        int errcode = errno;
+        printf("led_daemon: ERROR: Failed to open %s: %d\n",
+                CONFIG_EXAMPLES_LEDS_DEVPATH, errcode);
+      }
+      break;
+    case LED_CLOSE:
+      ioctl(fd, ULEDIOC_SETALL, 0);
+      close(fd);
+      break;
+    case LED_SET:{
+      lua_Integer i = luaL_checkinteger(L, 2);
+      int ret = ioctl(fd, ULEDIOC_SETALL, i);
+      if (ret < 0)
+      {
+        int errcode = errno;
+        printf("led_daemon: ERROR: ioctl(ULEDIOC_SUPPORTED) failed: %d\n", errcode);
+      }
+    }
+      break;
+    default:
+      break;
+  }
+
+  return 0;
 }
-///
+
 /*
 ** Main body of stand-alone interpreter (to be called in protected mode).
 ** Reads the options and handles them all.
@@ -645,7 +680,8 @@ int main (int argc, char **argv) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
   }
-  lua_register(L, "hogehoge", &c_swap);
+  lua_register(L, "led", &led);
+
   lua_pushcfunction(L, &pmain);  /* to call 'pmain' in protected mode */
   lua_pushinteger(L, argc);  /* 1st argument */
   lua_pushlightuserdata(L, argv); /* 2nd argument */
