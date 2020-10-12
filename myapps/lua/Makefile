@@ -1,0 +1,14 @@
+
+-include $(TOPDIR)/Make.defs
+-include $(SDKDIR)/Make.defs
+
+PROGNAME = $(CONFIG_MYAPPS_LUA_PROGNAME)
+PRIORITY = $(CONFIG_MYAPPS_LUA_PRIORITY)
+STACKSIZE = $(CONFIG_MYAPPS_LUA_STACKSIZE)
+MODULE = $(CONFIG_MYAPPS_LUA)
+
+ASRCS =
+CSRCS =
+MAINSRC = lua_main.c
+
+include $(APPDIR)/Application.mk

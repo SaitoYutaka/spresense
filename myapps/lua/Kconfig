@@ -1,0 +1,25 @@
+
+config MYAPPS_LUA
+	tristate "Lua"
+	default y
+	---help---
+		Enable the lua app
+
+if MYAPPS_LUA
+
+config MYAPPS_LUA_PROGNAME
+	string "Program name"
+	default "lua"
+	---help---
+		This is the name of the program that will be use when the NSH ELF
+		program is installed.
+
+config MYAPPS_LUA_PRIORITY
+	int "lua task priority"
+	default 100
+
+config MYAPPS_LUA_STACKSIZE
+	int "lua stack size"
+	default 2048
+
+endif
